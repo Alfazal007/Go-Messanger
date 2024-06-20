@@ -8,7 +8,7 @@ import (
 )
 
 type CustomUser struct {
-	Name      string    `json:"name"`
+	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	ID        uuid.UUID `json:"id"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -16,7 +16,7 @@ type CustomUser struct {
 
 func ConvertToUser(user database.User) CustomUser {
 	return CustomUser{
-		Name:      user.Name,
+		Username:  user.Username,
 		Email:     user.Email,
 		ID:        user.ID,
 		UpdatedAt: user.UpdatedAt,

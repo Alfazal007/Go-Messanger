@@ -9,5 +9,6 @@ import (
 func UserRouter(apiCfg *controllers.ApiConfig) *chi.Mux {
 	r := chi.NewRouter()
 	r.Post("/register", apiCfg.CreateUser)
+	r.Post("/login", apiCfg.LoginUser)
 	return r
 }

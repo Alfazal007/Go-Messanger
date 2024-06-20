@@ -16,7 +16,7 @@ import (
 func (apiCf *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 	validate := validator.New()
 	type parameter struct {
-		Name     string `json:"name" validate:"required,min=6,max=15"`
+		Username string `json:"username" validate:"required,min=6,max=15"`
 		Password string `json:"password" validate:"required,min=6"`
 		Email    string `json:"email" validate:"required,email"`
 	}
@@ -34,8 +34,8 @@ func (apiCf *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 		for _, err := range err.(validator.ValidationErrors) {
 			if err.Field() == "Email" {
 				errMsg += "Invalid email  "
-			} else if err.Field() == "Name" {
-				errMsg += "Name should be greater than or equal to 6 characters and less than or equal to 15  "
+			} else if err.Field() == "Username" {
+				errMsg += "Username should be greater than or equal to 6 characters and less than or equal to 15  "
 			} else if err.Field() == "Password" {
 				errMsg += "Password should be greater than or equal to 6 characters and less than or equal to 15  "
 			}
@@ -49,8 +49,8 @@ func (apiCf *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userCount, err := apiCf.DB.GetUserBeforeCreate(r.Context(), database.GetUserBeforeCreateParams{
-		Name:  params.Name,
-		Email: params.Email,
+		Username: params.Username,
+		Email:    params.Email,
 	})
 	if err != nil {
 		helper.RespondWithError(w, 400, "Error talking to the database")
@@ -62,7 +62,7 @@ func (apiCf *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := apiCf.DB.CreateUser(r.Context(), database.CreateUserParams{
 		ID:        uuid.New(),
-		Name:      params.Name,
+		Username:  params.Username,
 		Password:  hashedPassword,
 		Email:     params.Email,
 		CreatedAt: time.Now().UTC(),
@@ -73,5 +73,5 @@ func (apiCf *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 		helper.RespondWithError(w, 400, "Error creating the user in the database")
 		return
 	}
-	helper.RespondWithJSON(w, 200, helper.ConvertToUser(user))
+	helper.RespondWithJSON(w, 201, helper.ConvertToUser(user))
 }

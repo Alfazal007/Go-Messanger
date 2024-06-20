@@ -7,18 +7,19 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
-insert into users (id, name, email, password, created_at, updated_at) values ($1, $2, $3, $4, $5, $6) returning id, name, password, email, created_at, updated_at
+insert into users (id, username, email, password, created_at, updated_at) values ($1, $2, $3, $4, $5, $6) returning id, username, password, email, refresh_token, created_at, updated_at
 `
 
 type CreateUserParams struct {
 	ID        uuid.UUID
-	Name      string
+	Username  string
 	Email     string
 	Password  string
 	CreatedAt time.Time
@@ -28,7 +29,7 @@ type CreateUserParams struct {
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.ID,
-		arg.Name,
+		arg.Username,
 		arg.Email,
 		arg.Password,
 		arg.CreatedAt,
@@ -37,9 +38,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.Username,
 		&i.Password,
 		&i.Email,
+		&i.RefreshToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -47,23 +49,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserBeforeCreate = `-- name: GetUserBeforeCreate :one
-select count(*) from users where name=$1 or email=$2
+select count(*) from users where username=$1 or email=$2
 `
 
 type GetUserBeforeCreateParams struct {
-	Name  string
-	Email string
+	Username string
+	Email    string
 }
 
 func (q *Queries) GetUserBeforeCreate(ctx context.Context, arg GetUserBeforeCreateParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getUserBeforeCreate, arg.Name, arg.Email)
+	row := q.db.QueryRowContext(ctx, getUserBeforeCreate, arg.Username, arg.Email)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-select id, name, password, email, created_at, updated_at from users where email=$1
+select id, username, password, email, refresh_token, created_at, updated_at from users where email=$1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -71,9 +73,10 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.Username,
 		&i.Password,
 		&i.Email,
+		&i.RefreshToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -81,7 +84,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserById = `-- name: GetUserById :one
-select id, name, password, email, created_at, updated_at from users where id=$1
+select id, username, password, email, refresh_token, created_at, updated_at from users where id=$1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
@@ -89,9 +92,53 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.Username,
 		&i.Password,
 		&i.Email,
+		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserForLogin = `-- name: GetUserForLogin :one
+select id, username, password, email, refresh_token, created_at, updated_at from users where username=$1 or email=$1
+`
+
+func (q *Queries) GetUserForLogin(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserForLogin, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.Email,
+		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateRefreshToken = `-- name: UpdateRefreshToken :one
+update users set refresh_token=$1 where id=$2 returning id, username, password, email, refresh_token, created_at, updated_at
+`
+
+type UpdateRefreshTokenParams struct {
+	RefreshToken sql.NullString
+	ID           uuid.UUID
+}
+
+func (q *Queries) UpdateRefreshToken(ctx context.Context, arg UpdateRefreshTokenParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateRefreshToken, arg.RefreshToken, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.Email,
+		&i.RefreshToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
